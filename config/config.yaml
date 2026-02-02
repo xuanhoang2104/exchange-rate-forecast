@@ -1,0 +1,7 @@
+data:
+  raw_path: data/raw/exchange_rate_to_usd.csv
+  model_ready: data/processed/model_ready/usd_series.csv
+
+horizon: 7
+window: 30
+test_ratio: 0.2

@@ -1,0 +1,50 @@
+_wandb:
+    value:
+        cli_version: 0.24.1
+        e:
+            3qj92i3gxxicjcwunwus3ku6sahopeqa:
+                codePath: scripts\evaluation\backtest_arima.py
+                codePathLocal: scripts\evaluation\backtest_arima.py
+                cpu_count: 6
+                cpu_count_logical: 12
+                cudaVersion: "12.6"
+                disk:
+                    /:
+                        total: "370996670464"
+                        used: "294857945088"
+                email: hoangnguyen21042004@gmail.com
+                executable: D:\FPT\kì 7\DAT\exchange-rate\.venv\Scripts\python.exe
+                gpu: NVIDIA GeForce RTX 3060
+                gpu_count: 1
+                gpu_nvidia:
+                    - architecture: Ampere
+                      cudaCores: 3584
+                      memoryTotal: "12884901888"
+                      name: NVIDIA GeForce RTX 3060
+                      uuid: GPU-69c33120-249d-a952-676b-b57757aa8699
+                host: DESKTOP-77QDLSA
+                memory:
+                    total: "34164105216"
+                os: Windows-10-10.0.19045-SP0
+                program: d:\FPT\kì 7\DAT\exchange-rate\scripts\evaluation\backtest_arima.py
+                python: CPython 3.12.8
+                root: D:\FPT\kì 7\DAT\exchange-rate
+                startedAt: "2026-02-02T08:12:16.180414Z"
+                writerId: 3qj92i3gxxicjcwunwus3ku6sahopeqa
+        m: []
+        python_version: 3.12.8
+        t:
+            "1":
+                - 5
+                - 53
+            "2":
+                - 5
+                - 53
+            "3":
+                - 13
+            "4": 3.12.8
+            "5": 0.24.1
+            "8":
+                - 3
+            "12": 0.24.1
+            "13": windows-amd64

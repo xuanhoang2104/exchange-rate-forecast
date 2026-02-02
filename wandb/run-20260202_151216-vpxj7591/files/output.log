@@ -1,0 +1,73 @@
+Traceback (most recent call last):
+  File "d:\FPT\kì 7\DAT\exchange-rate\scripts\evaluation\backtest_arima.py", line 25, in <module>
+    for i in tqdm(range(window, len(series)-horizon), total=total_steps):
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\pmdarima\arima\auto.py", line 701, in auto_arima
+    sorted_res = search.solve()
+                 ^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\pmdarima\arima\_auto_solvers.py", line 432, in solve
+    self._do_fit((p + 1, d, q + 1), (P, D, Q, m)):
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\pmdarima\arima\_auto_solvers.py", line 235, in _do_fit
+    fit, fit_time, new_ic = self._fit_arima(
+                            ^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\pmdarima\arima\_auto_solvers.py", line 508, in _fit_candidate_model
+    fit.fit(y, X=X, **fit_params)
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\pmdarima\arima\arima.py", line 610, in fit
+    self._fit(y, X, **fit_args)
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\pmdarima\arima\arima.py", line 531, in _fit
+    fit, self.arima_res_ = _fit_wrapper()
+                           ^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\pmdarima\arima\arima.py", line 517, in _fit_wrapper
+    fitted = arima.fit(
+             ^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\statsmodels\tsa\statespace\mlemodel.py", line 705, in fit
+    mlefit = super().fit(start_params, method=method,
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\statsmodels\base\model.py", line 566, in fit
+    xopt, retvals, optim_settings = optimizer._fit(f, score, start_params,
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\statsmodels\base\optimizer.py", line 245, in _fit
+    xopt, retvals = func(objective, gradient, start_params, fargs, kwargs,
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\statsmodels\base\optimizer.py", line 665, in _fit_lbfgs
+    retvals = optimize.fmin_l_bfgs_b(
+              ^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\scipy\optimize\_lbfgsb_py.py", line 281, in fmin_l_bfgs_b
+    res = _minimize_lbfgsb(fun, x0, args=args, jac=jac, bounds=bounds,
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\scipy\optimize\_lbfgsb_py.py", line 469, in _minimize_lbfgsb
+    f, g = func_and_grad(x)
+           ^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\scipy\optimize\_differentiable_functions.py", line 413, in fun_and_grad
+    self._update_grad()
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\scipy\optimize\_differentiable_functions.py", line 375, in _update_grad
+    self.g = self._wrapped_grad(self.x, f0=self.f)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\scipy\optimize\_differentiable_functions.py", line 41, in __call__
+    g, dct = approx_derivative(
+             ^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\scipy\optimize\_numdiff.py", line 593, in approx_derivative
+    J, _nfev = _dense_difference(fun_wrapped, x0, f0, h,
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\scipy\optimize\_numdiff.py", line 686, in _dense_difference
+    df = [f_eval - f0 for f_eval in f_evals]
+                                    ^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\scipy\optimize\_numdiff.py", line 879, in __call__
+    f = np.atleast_1d(self.fun(x, *self.args, **self.kwargs))
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\scipy\_lib\_util.py", line 603, in __call__
+    fx = self.f(np.copy(x), *self.args)
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\statsmodels\base\model.py", line 534, in f
+    return -self.loglike(params, *args) / nobs
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\statsmodels\tsa\statespace\mlemodel.py", line 940, in loglike
+    loglike = self.ssm.loglike(complex_step=complex_step, **kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\statsmodels\tsa\statespace\kalman_filter.py", line 1001, in loglike
+    kfilter = self._filter(**kwargs)
+              ^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\FPT\kì 7\DAT\exchange-rate\.venv\Lib\site-packages\statsmodels\tsa\statespace\kalman_filter.py", line 924, in _filter
+    kfilter()
+KeyboardInterrupt

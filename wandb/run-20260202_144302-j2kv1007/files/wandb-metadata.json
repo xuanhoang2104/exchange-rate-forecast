@@ -1,0 +1,36 @@
+{
+  "os":  "Windows-10-10.0.19045-SP0",
+  "python":  "CPython 3.12.8",
+  "startedAt":  "2026-02-02T07:43:02.219686Z",
+  "program":  "d:\\FPT\\kì 7\\DAT\\exchange-rate\\scripts\\models\\train_arima_wandb.py",
+  "codePath":  "scripts\\models\\train_arima_wandb.py",
+  "codePathLocal":  "scripts\\models\\train_arima_wandb.py",
+  "email":  "hoangnguyen21042004@gmail.com",
+  "root":  "D:\\FPT\\kì 7\\DAT\\exchange-rate",
+  "host":  "DESKTOP-77QDLSA",
+  "executable":  "D:\\FPT\\kì 7\\DAT\\exchange-rate\\.venv\\Scripts\\python.exe",
+  "cpu_count":  6,
+  "cpu_count_logical":  12,
+  "gpu":  "NVIDIA GeForce RTX 3060",
+  "gpu_count":  1,
+  "disk":  {
+    "/":  {
+      "total":  "370996670464",
+      "used":  "294857805824"
+    }
+  },
+  "memory":  {
+    "total":  "34164105216"
+  },
+  "gpu_nvidia":  [
+    {
+      "name":  "NVIDIA GeForce RTX 3060",
+      "memoryTotal":  "12884901888",
+      "cudaCores":  3584,
+      "architecture":  "Ampere",
+      "uuid":  "GPU-69c33120-249d-a952-676b-b57757aa8699"
+    }
+  ],
+  "cudaVersion":  "12.6",
+  "writerId":  "1klbeq6zgagat6tgezjhda2h5nokxwig"
+}
