@@ -1,0 +1,998 @@
+# 📊 BÁO CÁO DỰ ÁN: DỰ ĐOÁN SỨC MẠNH ĐỒNG USD
+## Hướng dẫn thiết kế Slide thuyết trình
+
+---
+
+## 📌 TỔNG QUAN DỰ ÁN
+
+| Thông tin | Chi tiết |
+|-----------|----------|
+| **Tên dự án** | Exchange Rate Prediction - Dự đoán tỷ giá ngoại hối |
+| **Mục tiêu** | Dự đoán sức mạnh đồng USD trong 7 ngày tương lai |
+| **Dữ liệu** | Tỷ giá các đồng tiền so với USD từ 2004-2026 |
+| **Mô hình** | ARIMA (Baseline) → LSTM → Transformer |
+
+---
+
+## 🗂️ CẤU TRÚC THƯ MỤC DỰ ÁN
+
+```
+exchange-rate/
+├── config/                     # Cấu hình
+│   └── config.yaml            # Tham số: horizon=7, window=30
+├── data/
+│   ├── raw/                   # Dữ liệu gốc
+│   │   └── exchange_rate_to_usd.csv
+│   └── processed/             # Dữ liệu đã xử lý
+│       ├── merged/
+│       ├── usd_lstm_transformer/
+│       └── model_ready_arima_sarima/
+├── scripts/
+│   ├── craw_data/            # Thu thập dữ liệu
+│   ├── preprocessing/         # Tiền xử lý
+│   ├── eda/                   # Phân tích khám phá
+│   ├── models/                # Mô hình ML
+│   ├── training/              # Huấn luyện
+│   └── evaluation/            # Đánh giá
+├── models/                    # Mô hình đã lưu
+├── outputs/                   # Kết quả
+├── visualization/             # Biểu đồ
+├── notebooks/                 # Jupyter notebooks
+└── main.py                    # Ứng dụng Streamlit
+```
+
+---
+
+## 📚 KIẾN THỨC CHI TIẾT VỀ ARIMA
+
+### 1. ARIMA là gì?
+
+**ARIMA** = **A**uto**R**egressive **I**ntegrated **M**oving **A**verage
+
+Là mô hình thống kê dùng để phân tích và dự báo **chuỗi thời gian** (time series).
+
+---
+
+### 2. Ba thành phần của ARIMA
+
+| Thành phần | Ký hiệu | Ý nghĩa |
+|------------|---------|---------|
+| **AR** (AutoRegressive) | **p** | Hồi quy dựa trên các giá trị **quá khứ** của chính nó |
+| **I** (Integrated) | **d** | Số lần **sai phân** (differencing) để chuỗi dừng |
+| **MA** (Moving Average) | **q** | Hồi quy dựa trên **sai số dự báo** quá khứ |
+
+**Ký hiệu**: ARIMA(p, d, q)
+
+---
+
+### 3. Công thức toán học
+
+#### 3.1 AR (AutoRegressive) - Tự hồi quy
+
+$$y_t = c + \phi_1 y_{t-1} + \phi_2 y_{t-2} + ... + \phi_p y_{t-p} + \epsilon_t$$
+
+**Giải thích**:
+- $y_t$: Giá trị tại thời điểm t
+- $\phi_i$: Hệ số AR
+- $\epsilon_t$: Nhiễu trắng (white noise)
+- **p**: Số lag (bước lùi) sử dụng
+
+**Ví dụ AR(1)**:
+```
+y_t = 0.8 * y_{t-1} + ε_t
+```
+→ Giá trị hôm nay = 80% giá trị hôm qua + nhiễu
+
+---
+
+#### 3.2 I (Integrated) - Sai phân
+
+$$y'_t = y_t - y_{t-1}$$
+
+**Mục đích**: Biến chuỗi **không dừng** → **dừng** (stationary)
+
+| d | Công thức | Tên gọi |
+|---|-----------|---------|
+| d=0 | $y_t$ | Không sai phân |
+| d=1 | $y_t - y_{t-1}$ | First difference |
+| d=2 | $(y_t - y_{t-1}) - (y_{t-1} - y_{t-2})$ | Second difference |
+
+---
+
+#### 3.3 MA (Moving Average) - Trung bình trượt
+
+$$y_t = c + \epsilon_t + \theta_1 \epsilon_{t-1} + \theta_2 \epsilon_{t-2} + ... + \theta_q \epsilon_{t-q}$$
+
+**Giải thích**:
+- $\theta_i$: Hệ số MA
+- $\epsilon_{t-i}$: Sai số dự báo tại thời điểm t-i
+- **q**: Số lag của sai số sử dụng
+
+**Ví dụ MA(1)**:
+```
+y_t = ε_t + 0.5 * ε_{t-1}
+```
+→ Giá trị = nhiễu hiện tại + 50% nhiễu hôm qua
+
+---
+
+#### 3.4 Công thức ARIMA đầy đủ
+
+$$y'_t = c + \phi_1 y'_{t-1} + ... + \phi_p y'_{t-p} + \theta_1 \epsilon_{t-1} + ... + \theta_q \epsilon_{t-q} + \epsilon_t$$
+
+Trong đó $y'_t$ là chuỗi sau khi sai phân d lần.
+
+---
+
+### 4. Quy trình xây dựng ARIMA
+
+```mermaid
+flowchart TD
+    A[📊 Dữ liệu thô] --> B{Kiểm tra<br/>Stationarity?}
+    B -->|Không dừng| C[🔄 Differencing<br/>d = 1, 2, ...]
+    B -->|Dừng| D[📈 Phân tích ACF/PACF]
+    C --> B
+    D --> E[🎯 Chọn p, q]
+    E --> F[🔧 Fit Model]
+    F --> G{Residuals<br/>độc lập?}
+    G -->|Không| E
+    G -->|Có| H[✅ Model OK]
+    H --> I[📉 Dự báo]
+```
+
+---
+
+### 5. Kiểm tra Stationarity (Tính dừng)
+
+#### 5.1 Đặc điểm chuỗi dừng
+
+| Tính chất | Mô tả |
+|-----------|-------|
+| **Mean không đổi** | $E[y_t] = \mu$ (hằng số) |
+| **Variance không đổi** | $Var(y_t) = \sigma^2$ (hằng số) |
+| **Covariance chỉ phụ thuộc lag** | $Cov(y_t, y_{t-k})$ chỉ phụ thuộc k |
+
+#### 5.2 ADF Test (Augmented Dickey-Fuller)
+
+```python
+from statsmodels.tsa.stattools import adfuller
+
+result = adfuller(series)
+p_value = result[1]
+
+if p_value < 0.05:
+    print("✅ Chuỗi dừng")
+else:
+    print("❌ Chuỗi không dừng → Cần differencing")
+```
+
+**Kết quả trong project**:
+- ADF trước xử lý: p = 0.0018 → Không dừng
+- ADF sau log + diff: p ≈ 0 → Dừng ✅
+
+---
+
+### 6. ACF và PACF
+
+#### 6.1 ACF (AutoCorrelation Function)
+
+| Mô hình | ACF đặc trưng |
+|---------|---------------|
+| AR(p) | Giảm dần (decay) |
+| MA(q) | Cut-off sau lag q |
+| ARMA | Giảm dần |
+
+#### 6.2 PACF (Partial AutoCorrelation Function)
+
+| Mô hình | PACF đặc trưng |
+|---------|----------------|
+| AR(p) | Cut-off sau lag p |
+| MA(q) | Giảm dần (decay) |
+| ARMA | Giảm dần |
+
+**Cách đọc**:
+```
+Nếu PACF cut-off ở lag p → AR(p)
+Nếu ACF cut-off ở lag q → MA(q)
+```
+
+---
+
+### 7. Tiêu chí chọn mô hình
+
+| Tiêu chí | Công thức | Ý nghĩa |
+|----------|-----------|---------|
+| **AIC** | $-2\log(L) + 2k$ | Càng nhỏ càng tốt |
+| **BIC** | $-2\log(L) + k\log(n)$ | Phạt nặng hơn với k lớn |
+
+Trong đó:
+- L: Likelihood
+- k: Số tham số
+- n: Số quan sát
+
+**Trong project**: ARIMA(0,0,2) có AIC = -2595 (thấp nhất)
+
+---
+
+### 8. auto_arima trong Python
+
+```python
+from pmdarima import auto_arima
+
+model = auto_arima(
+    series,
+    start_p=0, start_q=0,    # Bắt đầu từ p=0, q=0
+    max_p=3, max_q=3,         # Tối đa p=3, q=3
+    d=None,                   # Tự động tìm d
+    seasonal=False,           # Không có seasonality
+    trace=True,               # Hiển thị quá trình
+    suppress_warnings=True
+)
+
+# Xem kết quả
+print(model.summary())
+# Dự báo
+forecast = model.predict(n_periods=7)
+```
+
+---
+
+### 9. Ưu và nhược điểm ARIMA
+
+| ✅ Ưu điểm | ❌ Nhược điểm |
+|-----------|--------------|
+| Chuẩn thống kê, dễ giải thích | Chỉ học được quan hệ **tuyến tính** |
+| Tốt cho **ngắn hạn** | Dự báo dài → hội tụ về mean |
+| Ít tham số | Không bắt được **regime change** |
+| Baseline so sánh | Không học được **nonlinear patterns** |
+
+---
+
+### 10. Tại sao ARIMA cho đường phẳng?
+
+**Hiện tượng**: Dự đoán 14-28 ngày → tất cả giá trị giống nhau
+
+**Nguyên nhân toán học**:
+
+```
+Dự đoán ARIMA = Tổ hợp tuyến tính của quá khứ + E[ε] = 0
+
+Khi dự đoán xa:
+- Không có thông tin mới
+- Mô hình hội tụ về E[y] (mean)
+- → Đường phẳng
+```
+
+```mermaid
+graph LR
+    A[Dự báo ngắn hạn<br/>1-7 ngày] -->|✅ OK| B[Có variation]
+    C[Dự báo dài hạn<br/>14-28 ngày] -->|❌| D[Mean reversion<br/>Đường phẳng]
+```
+
+---
+
+### 11. So sánh với SARIMA
+
+| Đặc điểm | ARIMA | SARIMA |
+|----------|-------|--------|
+| **Seasonal** | Không | Có |
+| **Ký hiệu** | (p,d,q) | (p,d,q)(P,D,Q)m |
+| **Phù hợp** | Dữ liệu không mùa | Dữ liệu có mùa (monthly, yearly) |
+
+**SARIMA**: ARIMA + Seasonal component
+- m = seasonal period (12 cho monthly, 4 cho quarterly)
+
+---
+
+### 12. Code trong Project
+
+```python
+# File: scripts/models/arima/arima.py
+
+from pmdarima import auto_arima
+from sklearn.metrics import mean_absolute_error
+
+# Load data
+series = pd.read_csv("data/processed/model_ready/usd_series.csv")["usd_index"]
+
+# Auto-fit ARIMA
+model = auto_arima(
+    series,
+    start_p=0, start_q=0,
+    max_p=3, max_q=3,
+    d=0,                    # Đã differencing trước đó
+    seasonal=False,
+    suppress_warnings=True
+)
+
+# Predict
+forecast = model.predict(n_periods=7)
+
+# Evaluate
+mae = mean_absolute_error(y_true, forecast)
+print(f"MAE: {mae:.4f}")
+```
+
+---
+
+### 13. Inverse Transform khi dự đoán
+
+Vì đã áp dụng **log + differencing**, cần inverse:
+
+```python
+# Dự báo trên chuỗi đã diff
+pred_diff = model.predict(n_periods=7)
+
+# Inverse differencing
+last_log = np.log(last_value)
+pred_log = last_log + np.cumsum(pred_diff)
+
+# Inverse log
+pred_actual = np.exp(pred_log)
+```
+
+---
+
+## 🧠 KIẾN THỨC CHI TIẾT VỀ LSTM
+
+### 1. LSTM là gì?
+
+**LSTM** = **L**ong **S**hort-**T**erm **M**emory
+
+Là một loại **Recurrent Neural Network (RNN)** đặc biệt, được thiết kế để học **phụ thuộc dài hạn** trong chuỗi thời gian.
+
+**Vấn đề của RNN thông thường**:
+- **Vanishing gradient**: Gradient nhỏ dần khi backprop qua nhiều bước
+- **Không nhớ được thông tin xa**
+
+**LSTM giải quyết**: Sử dụng cơ chế **gate** để kiểm soát dòng thông tin.
+
+---
+
+### 2. Kiến trúc LSTM Cell
+
+```
+                    ┌───────────────────────────────────────┐
+                    │             LSTM Cell                  │
+    c_{t-1} ───────>│  ┌─────┐    ┌─────┐                   │───────> c_t
+                    │  │  ×  │<───│  f  │ Forget Gate        │
+                    │  └──┬──┘    └─────┘                   │
+                    │     │       ┌─────┐    ┌─────┐        │
+                    │     └──────>│  +  │<───│  ×  │        │
+                    │             └──┬──┘    └──┬──┘        │
+                    │                │    ┌────┘            │
+                    │             ┌──┴──┐ │                  │
+    h_{t-1} ───────>│             │tanh │ │                  │───────> h_t
+                    │             └──┬──┘ │                  │
+     x_t ──────────>│                │    │                  │
+                    │  ┌─────┐    ┌──┴──┐ │ ┌─────┐         │
+                    │  │  i  │───>│  ×  │<┘ │  o  │         │
+                    │  └─────┘    └─────┘   └─────┘         │
+                    │ Input Gate           Output Gate       │
+                    └───────────────────────────────────────┘
+```
+
+---
+
+### 3. Ba loại Gate trong LSTM
+
+| Gate | Ký hiệu | Chức năng | Công thức |
+|------|---------|-----------|-----------|
+| **Forget Gate** | $f_t$ | Quyết định **bỏ** thông tin nào | $f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f)$ |
+| **Input Gate** | $i_t$ | Quyết định **thêm** thông tin nào | $i_t = \sigma(W_i \cdot [h_{t-1}, x_t] + b_i)$ |
+| **Output Gate** | $o_t$ | Quyết định **xuất** thông tin nào | $o_t = \sigma(W_o \cdot [h_{t-1}, x_t] + b_o)$ |
+
+**Trong đó**: $\sigma$ = sigmoid function (giá trị 0-1)
+
+---
+
+### 4. Công thức toán học LSTM
+
+#### Bước 1: Forget Gate - Quên thông tin cũ
+$$f_t = \sigma(W_f \cdot [h_{t-1}, x_t] + b_f)$$
+
+#### Bước 2: Input Gate - Chọn thông tin mới
+$$i_t = \sigma(W_i \cdot [h_{t-1}, x_t] + b_i)$$
+$$\tilde{C}_t = \tanh(W_C \cdot [h_{t-1}, x_t] + b_C)$$
+
+#### Bước 3: Cập nhật Cell State
+$$C_t = f_t \odot C_{t-1} + i_t \odot \tilde{C}_t$$
+
+#### Bước 4: Output Gate - Xuất output
+$$o_t = \sigma(W_o \cdot [h_{t-1}, x_t] + b_o)$$
+$$h_t = o_t \odot \tanh(C_t)$$
+
+**Ký hiệu**:
+- $\odot$: Element-wise multiplication
+- $C_t$: Cell state (bộ nhớ dài hạn)
+- $h_t$: Hidden state (output)
+
+---
+
+### 5. LSTM cho Time Series
+
+```mermaid
+flowchart LR
+    A[Input Sequence<br/>30 days] --> B[LSTM Layer<br/>32 units]
+    B --> C[Dense Layer<br/>1 unit]
+    C --> D[Output<br/>Prediction]
+```
+
+**Input shape**: [(batch_size, time_steps, features)](file:///d:/FPT/k%C3%AC%207/DAT/exchange-rate/scripts/preprocessing/feature_engineering.py#7-13) = [(N, 30, 1)](file:///d:/FPT/k%C3%AC%207/DAT/exchange-rate/scripts/preprocessing/feature_engineering.py#7-13)
+
+**Output**: Giá trị dự đoán ngày thứ 38
+
+---
+
+### 6. Code LSTM trong Project
+
+```python
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
+
+# Load windowed data
+X = np.load("data/processed/model_ready/X.npy")  # (N, 30)
+y = np.load("data/processed/model_ready/y.npy")  # (N,)
+
+# Reshape for LSTM: (N, 30, 1)
+X = X[..., None]
+
+# Build model
+model = Sequential([
+    LSTM(32, input_shape=(30, 1)),  # 32 hidden units
+    Dense(1)                         # Output layer
+])
+
+model.compile(optimizer="adam", loss="mse")
+model.fit(X_train, y_train, epochs=10, validation_split=0.2)
+
+# Predict
+predictions = model.predict(X_test)
+```
+
+---
+
+### 7. Hyperparameters quan trọng
+
+| Hyperparameter | Mô tả | Giá trị trong project |
+|----------------|-------|----------------------|
+| **Units** | Số neurons trong LSTM layer | 32 |
+| **Layers** | Số LSTM layers | 1 |
+| **Dropout** | Regularization | 0 (có thể thêm) |
+| **Optimizer** | Thuật toán tối ưu | Adam |
+| **Loss** | Hàm mất mát | MSE |
+| **Epochs** | Số lần train | 10 |
+
+---
+
+### 8. Tại sao LSTM tốt hơn ARIMA?
+
+| Tiêu chí | ARIMA | LSTM |
+|----------|-------|------|
+| **Quan hệ** | Tuyến tính | **Phi tuyến** ✅ |
+| **Memory** | Giới hạn (p lags) | **Long-term** ✅ |
+| **Pattern phức tạp** | ❌ Không | ✅ Học được |
+| **Regime change** | ❌ Không | ✅ Có thể |
+| **Giải thích** | ✅ Dễ | ❌ Black box |
+
+---
+
+### 9. Stacked LSTM (Nâng cao)
+
+```python
+model = Sequential([
+    LSTM(64, return_sequences=True, input_shape=(30, 1)),
+    LSTM(32, return_sequences=False),
+    Dense(16, activation='relu'),
+    Dense(1)
+])
+```
+
+**Khi nào dùng**: Dữ liệu có nhiều pattern phức tạp, cần nhiều abstraction layers.
+
+---
+
+### 10. Bidirectional LSTM
+
+```python
+from tensorflow.keras.layers import Bidirectional
+
+model = Sequential([
+    Bidirectional(LSTM(32), input_shape=(30, 1)),
+    Dense(1)
+])
+```
+
+**Ý nghĩa**: Học pattern từ cả **quá khứ → tương lai** và **tương lai → quá khứ**.
+
+---
+
+## 🤖 KIẾN THỨC CHI TIẾT VỀ TRANSFORMER
+
+### 1. Transformer là gì?
+
+**Transformer** là kiến trúc deep learning được giới thiệu trong paper "Attention Is All You Need" (2017).
+
+**Đặc điểm chính**:
+- **Không dùng RNN/LSTM** (không sequential)
+- Dựa trên cơ chế **Self-Attention**
+- **Song song hóa** tốt → train nhanh
+
+---
+
+### 2. Self-Attention Mechanism
+
+**Ý tưởng**: Mỗi vị trí trong chuỗi "nhìn" vào tất cả các vị trí khác để hiểu context.
+
+```
+"Tỷ giá EUR hôm nay phụ thuộc vào JPY tuần trước"
+     │                              │
+     └──────── Attention ───────────┘
+```
+
+---
+
+### 3. Công thức Attention
+
+$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+
+**Trong đó**:
+- **Q** (Query): "Tôi đang tìm gì?"
+- **K** (Key): "Tôi có thông tin gì?"
+- **V** (Value): "Giá trị thực sự"
+- **$d_k$**: Dimension của key (để scale)
+
+---
+
+### 4. Multi-Head Attention
+
+Thay vì 1 attention, dùng **nhiều heads** song song:
+
+$$\text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, ..., \text{head}_h)W^O$$
+
+$$\text{head}_i = \text{Attention}(QW_i^Q, KW_i^K, VW_i^V)$$
+
+**Lợi ích**: Học được nhiều loại quan hệ khác nhau (short-term, long-term, trend, volatility...)
+
+---
+
+### 5. Kiến trúc Transformer cho Time Series
+
+```mermaid
+flowchart TD
+    A[Input: 30 days × 7 currencies] --> B[Positional Encoding]
+    B --> C[Multi-Head Attention]
+    C --> D[Add & Norm]
+    D --> E[Feed Forward]
+    E --> F[Add & Norm]
+    F --> G[Output Layer]
+    G --> H[Prediction: 7 days ahead]
+```
+
+---
+
+### 6. Positional Encoding
+
+Vì Transformer không có khái niệm "thứ tự", cần thêm **positional encoding**:
+
+$$PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d}}\right)$$
+$$PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d}}\right)$$
+
+**Ý nghĩa**: Mã hóa vị trí của mỗi time step trong chuỗi.
+
+---
+
+### 7. So sánh LSTM vs Transformer
+
+| Tiêu chí | LSTM | Transformer |
+|----------|------|-------------|
+| **Cách xử lý sequence** | Tuần tự | **Song song** ✅ |
+| **Long-range dependency** | Khó | **Dễ** (attention) ✅ |
+| **Multivariate** | Có thể | **Tự nhiên** ✅ |
+| **Tốc độ train** | Chậm | **Nhanh** ✅ |
+| **Data cần** | Ít | **Nhiều** |
+| **Interpretability** | ❌ | **Attention weights** ✅ |
+
+---
+
+### 8. Code Transformer cơ bản
+
+```python
+import torch
+import torch.nn as nn
+
+class TimeSeriesTransformer(nn.Module):
+    def __init__(self, input_dim=7, d_model=64, nhead=4, 
+                 num_layers=2, dim_feedforward=256):
+        super().__init__()
+        
+        # Input embedding
+        self.embedding = nn.Linear(input_dim, d_model)
+        
+        # Positional encoding
+        self.pos_encoder = PositionalEncoding(d_model)
+        
+        # Transformer encoder
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=d_model,
+            nhead=nhead,
+            dim_feedforward=dim_feedforward
+        )
+        self.transformer = nn.TransformerEncoder(
+            encoder_layer, 
+            num_layers=num_layers
+        )
+        
+        # Output layer
+        self.fc = nn.Linear(d_model, 1)
+    
+    def forward(self, x):
+        # x: (batch, seq_len, features)
+        x = self.embedding(x)
+        x = self.pos_encoder(x)
+        x = self.transformer(x)
+        x = self.fc(x[:, -1, :])  # Chỉ lấy output cuối
+        return x
+```
+
+---
+
+### 9. Input cho Transformer (Multivariate)
+
+```python
+# 7 currencies × 30 days
+X_shape = (batch_size, 30, 7)
+
+# Các features:
+features = [
+    'euro_to_usd',
+    'japanese_yen_to_usd',
+    'uk_pound_to_usd',
+    'swiss_franc_to_usd',
+    'australian_dollar_to_usd',
+    'canadian_dollar_to_usd',
+    'chinese_yuan_to_usd'
+]
+```
+
+**Lợi thế**: Transformer tự động học **quan hệ giữa các currencies** qua Attention.
+
+---
+
+### 10. Attention Visualization
+
+Transformer cho phép **visualize attention weights** để hiểu mô hình:
+
+```python
+# Lấy attention weights
+attention_weights = model.get_attention_weights(x)
+
+# Visualize
+plt.imshow(attention_weights, cmap='viridis')
+plt.xlabel("Key positions (time steps)")
+plt.ylabel("Query positions")
+plt.title("Attention Heatmap")
+```
+
+**Ý nghĩa**:
+- Xem model đang "chú ý" vào time steps nào
+- Giải thích tại sao model đưa ra dự đoán
+
+---
+
+### 11. Các biến thể Transformer cho Time Series
+
+| Model | Đặc điểm |
+|-------|----------|
+| **Informer** | Sparse attention cho sequence dài |
+| **Autoformer** | Series decomposition |
+| **FEDformer** | Frequency domain learning |
+| **PatchTST** | Patch-based cho multivariate |
+| **Temporal Fusion Transformer** | Attention + variable selection |
+
+---
+
+### 12. Tại sao Transformer cho dự đoán tỷ giá?
+
+| Lợi thế | Giải thích |
+|---------|------------|
+| **Multi-currency learning** | Học mối quan hệ EUR-JPY-GBP... đồng thời |
+| **Shock detection** | Attention có thể nhìn xa để detect shock |
+| **Lead-lag effects** | Một currency có thể "dẫn dắt" currency khác |
+| **Regime change** | Attention weights thay đổi theo regime |
+
+---
+
+### 13. Pipeline hoàn chỉnh
+
+```mermaid
+flowchart TD
+    A[Raw Data<br/>7 currencies] --> B[Build USD Index<br/>+ Preprocessing]
+    B --> C{Chọn Model}
+    C --> D[ARIMA<br/>Baseline]
+    C --> E[LSTM<br/>Univariate]
+    C --> F[Transformer<br/>Multivariate]
+    D --> G[Compare Results]
+    E --> G
+    F --> G
+    G --> H[Best Model<br/>for Deployment]
+```
+
+---
+
+## 📋 CÁC SLIDE ĐỀ XUẤT
+
+### **SLIDE 1: Trang bìa**
+- Tên đề tài: "Dự đoán sức mạnh đồng USD sử dụng Machine Learning"
+- Thành viên nhóm
+- Môn học: DAT
+- Thời gian
+
+---
+
+### **SLIDE 2: Giới thiệu bài toán**
+- **Vấn đề**: Dự đoán xu hướng tỷ giá ngoại hối
+- **Mục tiêu**: Dự đoán USD Index trong 7 ngày tới
+- **Ý nghĩa thực tiễn**: Trading, quản lý rủi ro tài chính
+
+---
+
+### **SLIDE 3: Dữ liệu sử dụng**
+
+| Đặc điểm | Giá trị |
+|----------|---------|
+| **Nguồn dữ liệu** | 7 loại tỷ giá major currencies |
+| **Thời gian** | 2004 - 2026 |
+| **Các đồng tiền** | EUR, JPY, GBP, CHF, AUD, CAD, CNY |
+
+**File**: [exchange_rate_to_usd.csv](file:///d:/FPT/kì%207/DAT/exchange-rate/data/raw/exchange_rate_to_usd.csv)
+
+---
+
+### **SLIDE 4: Xây dựng USD Index**
+
+```
+USD_index(t) = mean(EUR, JPY, GBP, CHF, AUD, CAD, CNY)
+```
+
+**Lý do**:
+- Kiểm soát nguồn dữ liệu
+- Hiểu rõ cấu trúc feature
+- Phù hợp cho mở rộng multivariate
+
+**Script**: [build_usd_index.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/preprocessing/build_usd_index.py)
+
+---
+
+### **SLIDE 5: Tiền xử lý dữ liệu**
+
+```mermaid
+flowchart LR
+    A[Raw Data] --> B[Clean & Merge]
+    B --> C[Build USD Index]
+    C --> D[Log Transform]
+    D --> E[Differencing]
+    E --> F[Stationarity Check]
+```
+
+**Các bước**:
+1. Làm sạch dữ liệu → [clean_data.py](file:///d:/FPT/k%C3%AC%207/DAT/exchange-rate/scripts/preprocessing/clean_data.py)
+2. Tạo USD Index → [build_usd_index.py](file:///d:/FPT/k%C3%AC%207/DAT/exchange-rate/scripts/preprocessing/build_usd_index.py)
+3. Kiểm tra tính dừng (ADF test) → [stationarity.py](file:///d:/FPT/k%C3%AC%207/DAT/exchange-rate/scripts/preprocessing/stationarity.py)
+4. Feature Engineering → [feature_engineering.py](file:///d:/FPT/k%C3%AC%207/DAT/exchange-rate/scripts/preprocessing/feature_engineering.py)
+
+---
+
+### **SLIDE 6: Kiểm tra Stationarity**
+
+| Kiểm tra | Kết quả |
+|----------|---------|
+| ADF trước xử lý | p-value = 0.0018 → Không dừng |
+| ADF sau log + diff | p-value ≈ 0 → Đã dừng ✅ |
+
+**Phương pháp**:
+- Log transform
+- First differencing
+
+---
+
+### **SLIDE 7: Mô hình ARIMA (Baseline)**
+
+**Thông tin mô hình**:
+| Tham số | Giá trị |
+|---------|---------|
+| Model | ARIMA(0,0,2) |
+| AIC | -2595 |
+| MAE | ≈ 0.052 |
+
+**File**: [arima.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/models/arima/arima.py)
+
+---
+
+### **SLIDE 8: Đánh giá ARIMA**
+
+| Phương pháp | Mô tả |
+|-------------|-------|
+| **Hold-out** | 80% train / 20% test |
+| **Rolling Backtest** | Train lại mỗi bước, dự đoán 7 ngày |
+
+**File**: [backtest_arima.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/evaluation/backtest_arima.py)
+
+---
+
+### **SLIDE 9: Hạn chế của ARIMA**
+
+> [!WARNING]
+> ARIMA dự đoán dài hạn → Đường phẳng (Mean Reversion)
+
+**Nguyên nhân**:
+- Mô hình tuyến tính
+- Không học được pattern phi tuyến
+- Hội tụ về giá trị trung bình
+
+**Kết luận**: Cần mô hình học sâu (Deep Learning)
+
+---
+
+### **SLIDE 10: Mô hình LSTM**
+
+**Kiến trúc**:
+```
+Input(30 days) → LSTM(32 units) → Dense(1) → Output
+```
+
+**Ưu điểm so với ARIMA**:
+| ARIMA | LSTM |
+|-------|------|
+| Linear | Nonlinear |
+| Không nhớ dài hạn | Long-term memory |
+| Hội tụ mean | Học pattern phức tạp |
+
+**File**: [lstm.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/models/lstm.py)
+
+---
+
+### **SLIDE 11: Feature Engineering cho Deep Learning**
+
+```python
+# Window: 30 ngày → Dự đoán: ngày thứ 38
+X: (N, 30, 1)  # N samples, 30 time steps, 1 feature
+y: (N,)        # Target value
+```
+
+**File**: [feature_engineering.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/preprocessing/feature_engineering.py)
+
+---
+
+### **SLIDE 12: Mô hình Transformer (Đề xuất)**
+
+**Ưu điểm**:
+- Attention mechanism toàn chuỗi
+- Không bị giới hạn cửa sổ
+- Học được:
+  - Quan hệ giữa các currency
+  - Shock toàn cục
+  - Lead-lag effects
+
+**Input**: (N, 30, 7) - Multivariate với 7 currencies
+
+---
+
+### **SLIDE 13: So sánh các mô hình**
+
+```mermaid
+graph TD
+    A[ARIMA<br/>Baseline Linear] --> B{Kết quả?}
+    B -->|Ngắn hạn OK| C[✅ Baseline tốt]
+    B -->|Dài hạn Flat| D[❌ Cần DL]
+    D --> E[LSTM<br/>Nonlinear + Memory]
+    E --> F[Transformer<br/>Attention + Multivariate]
+```
+
+| Mô hình | Điểm mạnh | Điểm yếu |
+|---------|-----------|----------|
+| ARIMA | Dễ hiểu, baseline | Linear, short-term only |
+| LSTM | Nonlinear, memory | Single variable |
+| Transformer | Attention, multi-var | Phức tạp |
+
+---
+
+### **SLIDE 14: Demo ứng dụng**
+
+**Streamlit Application**:
+- Dự đoán USD Index với slider chọn horizon
+- Hiển thị chart và bảng dữ liệu
+- Interpretation tự động
+
+**File**: [main.py](file:///d:/FPT/kì%207/DAT/exchange-rate/main.py)
+
+**Chạy**: `streamlit run main.py`
+
+---
+
+### **SLIDE 15: Kết luận**
+
+> [!IMPORTANT]
+> **Kết quả chính**:
+> 1. ✅ ARIMA fit tốt cho short-term
+> 2. ❌ ARIMA không học được nonlinear patterns
+> 3. ✅ LSTM/Transformer cần thiết cho long-term prediction
+
+**Hướng phát triển**:
+- Hoàn thiện Transformer multivariate
+- Thêm attention visualization
+- Deploy production
+
+---
+
+### **SLIDE 16: Q&A**
+- Câu hỏi & Thảo luận
+
+---
+
+## 📁 FILE QUAN TRỌNG CẦN THAM KHẢO
+
+### Preprocessing
+| File | Mô tả |
+|------|-------|
+| [build_usd_index.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/preprocessing/build_usd_index.py) | Xây dựng USD Index từ 7 currencies |
+| [feature_engineering.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/preprocessing/feature_engineering.py) | Tạo windowed data cho LSTM |
+| [stationarity.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/preprocessing/stationarity.py) | Kiểm tra ADF test |
+
+### Models
+| File | Mô tả |
+|------|-------|
+| [arima.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/models/arima/arima.py) | ARIMA backtest |
+| [lstm.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/models/lstm.py) | LSTM model |
+| [transformer.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/models/transformer.py) | Transformer (đang phát triển) |
+
+### Evaluation
+| File | Mô tả |
+|------|-------|
+| [backtest_arima.py](file:///d:/FPT/kì%207/DAT/exchange-rate/scripts/evaluation/backtest_arima.py) | Rolling backtest cho ARIMA |
+
+### Documentation
+| File | Mô tả |
+|------|-------|
+| [readme_arima.md](file:///d:/FPT/kì%207/DAT/exchange-rate/readme_arima.md) | Tài liệu chi tiết về ARIMA |
+
+---
+
+## 📊 BIỂU ĐỒ CÓ SẴN
+
+Các hình ảnh có thể dùng cho slide:
+- [arima_forecast.png](file:///d:/FPT/k%C3%AC%207/DAT/exchange-rate/arima_forecast.png) - Biểu đồ dự báo ARIMA
+- [backtest.png](file:///d:/FPT/k%C3%AC%207/DAT/exchange-rate/backtest.png) - Kết quả backtest
+- `rolling back arima.png` - Rolling backtest
+- [image-1.png](file:///d:/FPT/k%C3%AC%207/DAT/exchange-rate/image-1.png) - Hình minh họa
+
+---
+
+## 🛠️ CÁCH CHẠY PROJECT
+
+```bash
+# 1. Cài đặt dependencies
+pip install -r requirements.txt
+
+# 2. Chạy preprocessing
+python scripts/preprocessing/build_usd_index.py
+
+# 3. Chạy ARIMA
+python scripts/models/arima/arima.py
+
+# 4. Chạy LSTM
+python scripts/models/lstm.py
+
+# 5. Chạy Demo App
+streamlit run main.py
+```
+
+---
+
+## 💡 GỢI Ý THIẾT KẾ SLIDE
+
+1. **Màu sắc**: Sử dụng tông xanh dương (tài chính) + trắng
+2. **Font**: Roboto hoặc Inter cho hiện đại
+3. **Charts**: Sử dụng các hình có sẵn trong project
+4. **Animation**: Reveal từng điểm khi trình bày
+5. **Template**: Clean, professional style

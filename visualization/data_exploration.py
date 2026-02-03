@@ -14,7 +14,7 @@ warnings.filterwarnings('ignore')
 
 # Cấu hình đường dẫn
 INPUT_DIR = r"D:\FPT\ki 7\DAT\project_exchange_rate\exchange-rate-forecast\data\processed\currencies"
-OUTPUT_BASE_DIR = r"D:\FPT\ki 7\DAT\project_exchange_rate\exchange-rate-forecast\data\processed"
+OUTPUT_BASE_DIR = r"D:\FPT\kì 7\DAT\exchange-rate\data\processed"
 
 def create_output_directories():
     """Tạo các thư mục đầu ra nếu chưa tồn tại"""
